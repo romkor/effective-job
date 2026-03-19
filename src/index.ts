@@ -38,6 +38,8 @@ export { JsonSerde, createJsonSerde } from "./serde.ts"
 export type { StorageShape } from "./storage/service.ts"
 export { Storage } from "./storage/service.ts"
 export { MemoryStorage, MemoryStorageLive } from "./storage/memory.ts"
+export { PgStorageLive, makePgStorageLayer } from "./storage/postgres.ts"
+export type { PgStorageConfig } from "./storage/postgres.ts"
 
 // ── Queue ─────────────────────────────────────────────────────────────────────
 export { makeQueue } from "./queue.ts"
