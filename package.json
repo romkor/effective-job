@@ -24,6 +24,10 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@effect/experimental": "^0.59.0",
+    "@effect/platform": "^0.95.0",
+    "@effect/sql": "^0.50.0",
+    "@effect/sql-pg": "^0.51.0",
     "effect": "^3.20.0"
   },
   "devDependencies": {
