@@ -59,6 +59,16 @@ export const makeReaper = <TPayload = unknown>(
     const eventQueue = yield* EQueue.unbounded<ReaperEvent>()
     const emitEvent = (e: ReaperEvent): Effect.Effect<void> => EQueue.offer(eventQueue, e).pipe(Effect.ignore)
 
+    /** Catch any error/defect from an Effect and emit it as an error event */
+    const catchAndEmitError = <A>(effect: Effect.Effect<A>): Effect.Effect<A | void> =>
+      effect.pipe(
+        Effect.catchAllCause((cause) => {
+          const raw = Cause.squash(cause)
+          const err = raw instanceof Error ? raw : new Error(String(raw))
+          return emitEvent({ _tag: "error", error: err })
+        })
+      )
+
     // ── Mutable state ─────────────────────────────────────────────
     const runningRef = yield* Ref.make(false)
     const isLeaderRef = yield* Ref.make(false)
@@ -146,7 +156,7 @@ export const makeReaper = <TPayload = unknown>(
         if (workerId) {
           yield* recoverStalledJob(id, workerId)
         }
-      }).pipe(Effect.catchAllCause((cause) => { const raw = Cause.squash(cause); const err = raw instanceof Error ? raw : new Error(String(raw)); return emitEvent({ _tag: "error", error: err }) }))
+      }).pipe(catchAndEmitError)
 
     const handleEvent = (id: string, event: string): Effect.Effect<void> =>
       Effect.gen(function* () {
@@ -282,7 +292,7 @@ export const makeReaper = <TPayload = unknown>(
               const got = yield* tryAcquireLock(lockTTL)
               if (got) yield* transitionToLeader()
             }
-          }).pipe(Effect.catchAllCause((cause) => { const raw = Cause.squash(cause); const err = raw instanceof Error ? raw : new Error(String(raw)); return emitEvent({ _tag: "error", error: err }) }))
+          }).pipe(catchAndEmitError)
         )
 
         const fiber = yield* Effect.forkDaemon(leadershipLoop)
