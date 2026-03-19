@@ -1,0 +1,36 @@
+{
+  "name": "effective-job",
+  "version": "0.1.0",
+  "description": "Effect.ts port of platformatic/job-queue - a reliable job queue with deduplication, request/response support, and pluggable storage backends",
+  "homepage": "https://github.com/romkor/effective-job",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/romkor/effective-job.git"
+  },
+  "keywords": [
+    "queue",
+    "job-queue",
+    "effect",
+    "effect-ts",
+    "functional"
+  ],
+  "private": false,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --no-warnings --test --test-timeout=60000 'test/**/*.test.ts'",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "effect": "^3.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  }
+}
