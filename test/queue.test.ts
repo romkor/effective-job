@@ -495,6 +495,33 @@ describe("Queue", () => {
         })
       ))
 
+    it("should use producer default resultTTL when no per-job override is provided", () =>
+      runTest(
+        Effect.gen(function* () {
+          // Producer enqueues with a short default TTL (20 ms) but consumer has a long one.
+          // The TTL embedded in the message at enqueue time should be used.
+          const storageService = yield* StorageTag
+
+          const producerQueue = yield* makeTestQueue({ resultTTL: 20, visibilityTimeout: 5_000 })
+          yield* producerQueue.start
+          yield* producerQueue.enqueue("job-1", { value: 21 })
+          yield* producerQueue.stop
+
+          const consumerQueue = yield* makeTestQueue({ resultTTL: 5_000, visibilityTimeout: 5_000 })
+          yield* consumerQueue.execute((job) => Effect.succeed({ result: job.payload.value * 2 }))
+          yield* consumerQueue.start
+          yield* waitForEvent(consumerQueue.events, "completed")
+
+          assert.deepStrictEqual(yield* consumerQueue.getResult("job-1"), { result: 42 })
+
+          yield* Effect.sleep("60 millis")
+
+          // Result should have expired because the producer's TTL (20 ms) was used
+          const expiredResult = yield* storageService.getResult("job-1")
+          assert.strictEqual(expiredResult, null)
+        })
+      ))
+
     it("should reject invalid per-job resultTTL values", () =>
       runTest(
         Effect.gen(function* () {
@@ -632,6 +659,24 @@ describe("Queue", () => {
           yield* queue.enqueue("job-1", { value: 21 })
           const result = yield* queue.updateResultTTL("job-1", 100)
           assert.deepStrictEqual(result, { status: "not_terminal" })
+        })
+      ))
+
+    it("should return not_found when terminal payload and job state have expired", () =>
+      runTest(
+        Effect.gen(function* () {
+          const localQueue = yield* makeTestQueue({ resultTTL: 20, visibilityTimeout: 5_000 })
+          yield* localQueue.execute((job) => Effect.succeed({ result: job.payload.value * 2 }))
+          yield* localQueue.start
+          yield* localQueue.enqueue("job-1", { value: 21 })
+          yield* waitForEvent(localQueue.events, "completed")
+
+          yield* Effect.sleep("60 millis")
+
+          // After resultTTL expires, both the job state and result are cleaned up,
+          // so updateResultTTL returns not_found (the job ID can be re-enqueued)
+          const updateResult = yield* localQueue.updateResultTTL("job-1", 100)
+          assert.deepStrictEqual(updateResult, { status: "not_found" })
         })
       ))
 

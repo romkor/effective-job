@@ -20,7 +20,7 @@
   "exports": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --no-warnings --test --test-timeout=60000 'test/queue.test.ts' 'test/reaper.test.ts'",
+    "test": "node --experimental-strip-types --no-warnings --test --test-timeout=60000 'test/queue.test.ts' 'test/reaper.test.ts' 'test/deduplication.test.ts' 'test/request-response.test.ts'",
     "test:pg": "node --experimental-strip-types --no-warnings --test --test-timeout=30000 'test/postgres.test.ts'",
     "test:all": "node --experimental-strip-types --no-warnings --test --test-timeout=60000 'test/**/*.test.ts'",
     "lint": "tsc --noEmit"

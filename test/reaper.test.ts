@@ -6,7 +6,7 @@
  */
 import assert from "node:assert"
 import { describe, it } from "node:test"
-import { Effect, Fiber, Stream } from "effect"
+import { Effect, Exit, Fiber, Stream } from "effect"
 import { makeQueue } from "../src/queue.ts"
 import { makeReaper } from "../src/reaper.ts"
 import { MemoryStorage } from "../src/storage/memory.ts"
@@ -196,6 +196,49 @@ describe("Reaper", () => {
 
           assert.deepStrictEqual(result, { result: 42 })
           assert.strictEqual(processCount, 1)
+        })
+      ))
+
+    it("should cancel timer when job completes", () =>
+      runTest(
+        Effect.gen(function* () {
+          const queue = yield* makeTestQueue({ visibilityTimeout: 100 })
+          const reaper = yield* makeTestReaper({ visibilityTimeout: 100 })
+
+          yield* queue.execute((job) => Effect.succeed({ result: job.payload.value * 2 }))
+
+          yield* queue.start
+          yield* reaper.start
+
+          yield* queue.enqueueAndWait("job-1", { value: 21 }, { timeout: 5_000 })
+
+          // Wait past visibility timeout – reaper should have cancelled the timer on completion
+          yield* Effect.sleep("150 millis")
+
+          // No stalled event should have been emitted
+        })
+      ))
+
+    it("should cancel timer when job fails", () =>
+      runTest(
+        Effect.gen(function* () {
+          const queue = yield* makeTestQueue({ visibilityTimeout: 100 })
+          const reaper = yield* makeTestReaper({ visibilityTimeout: 100 })
+
+          yield* queue.execute(() => Effect.fail(new Error("Job failed")))
+
+          yield* queue.start
+          yield* reaper.start
+
+          const exit = yield* Effect.exit(
+            queue.enqueueAndWait("job-1", { value: 21 }, { timeout: 5_000, maxAttempts: 1 })
+          )
+          assert.ok(Exit.isFailure(exit))
+
+          // Wait past visibility timeout – reaper should have cancelled the timer on failure
+          yield* Effect.sleep("150 millis")
+
+          // No stalled event should have been emitted for the completed (failed) job
         })
       ))
   })
